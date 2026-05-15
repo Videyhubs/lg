@@ -1,0 +1,57 @@
+# ═══════════════════════════════════════════════════════
+# LinkGuard - Docker Compose Deployment
+# ═══════════════════════════════════════════════════════
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose logs -f        # View logs
+#   docker compose down           # Stop all services
+#   docker compose up -d --build  # Rebuild and start
+# ═══════════════════════════════════════════════════════
+
+services:
+  linkguard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linkguard-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - linkguard-data:/app/db
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${APP_URL:-http://localhost:3000}
+      - DATABASE_URL=file:/app/db/custom.db
+      - ADMIN_SESSION_SECRET=${ADMIN_SESSION_SECRET:-change-this-secret}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-32-char-encryption-key-please-change}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Caddy reverse proxy with auto-SSL
+  caddy:
+    image: caddy:2-alpine
+    container_name: linkguard-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      linkguard:
+        condition: service_healthy
+
+volumes:
+  linkguard-data:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local

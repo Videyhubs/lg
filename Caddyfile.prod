@@ -1,0 +1,31 @@
+# ═══════════════════════════════════════════════════════
+# Caddy Production Configuration
+# ═══════════════════════════════════════════════════════
+# Replace "your-domain.com" with your actual domain.
+# Caddy automatically provisions SSL certificates via Let's Encrypt.
+# ═══════════════════════════════════════════════════════
+
+your-domain.com, www.your-domain.com {
+    reverse_proxy linkguard:3000
+
+    # Security headers
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+
+    # Compression
+    encode gzip zstd
+
+    # Logging
+    log {
+        output file /data/access.log {
+            roll_size 100mb
+            roll_keep 5
+        }
+    }
+}
